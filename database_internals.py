@@ -46,6 +46,19 @@ def insert_book_info(cursor, data):
         VALUES (?, ?, ?)
     ''', (data["bookname"], data["book_pages_cnt"], data["start_date"]))
 
+    cursor.execute('''
+        INSERT INTO daily_reading (user_id, book_id, date, current_page)
+        SELECT max(user_id), max(book_id), max(date), max(current_page)
+        FROM
+        (
+            SELECT null as user_id, book_id, start_date as date, 0 as current_page 
+            FROM books_table where bookname = ?
+            UNION ALL
+            SELECT user_id, null as book_id, null as date, null as current_page
+            FROM users_table where user_name = ?        
+        )
+    ''', (data["bookname"], data["user_name"]))
+
 
 def insert_daily_info(cursor, data):
     cursor.execute('''
@@ -84,7 +97,7 @@ def get_books_by_user(cursor, user_name):
             SELECT book_id FROM daily_reading WHERE user_id IN (
                 SELECT user_id FROM users_table WHERE user_name = ?
             )
-        ) LIMIT 5
+        ) ORDER BY start_date DESC LIMIT 5
     ''', (user_name,))
     return [row[0] for row in cursor.fetchall()]
 
